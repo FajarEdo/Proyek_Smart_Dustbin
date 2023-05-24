@@ -1,0 +1,94 @@
+#define BLYNK_TEMPLATE_ID "TMPLR9CV6r55"
+#define BLYNK_TEMPLATE_NAME "smart trash"
+#define BLYNK_AUTH_TOKEN "p1zE1-wQOWNHvRjRNLWTdzIJ7SkLFTzn"
+#include <Servo.h>
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+int IrRead = 0;
+Servo myservo;
+const int trigger = D5;
+const int echo = D4;
+unsigned int Duration;
+unsigned int Jarak;
+int volPersen;
+float x0;
+int RedLed = D6;
+int GreenLed = D7;
+
+BlynkTimer Timer;
+
+char ssid[] = "master01"; 
+char pass[] = "12345678";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+  myservo.attach (D2);
+  myservo.write (0);
+  pinMode(trigger, OUTPUT);
+  pinMode(echo, INPUT);
+  pinMode(RedLed, OUTPUT);
+  pinMode(GreenLed, OUTPUT);
+}
+
+void BukaTutup() {
+  // put your main code here, to run repeatedly:
+  IrRead = digitalRead(5);
+  Serial.print("Sensor Infra Merah = ");
+  Serial.println(IrRead);
+  delay(100);
+  if(IrRead == 0 && volPersen < 80){
+    myservo.write(180);
+    Serial.println("Tutup terbuka");
+    delay(1000);
+  } else{
+    myservo.write(0);
+    Serial.println("Tutup tertutup");
+  }
+  Blynk.virtualWrite(V4, volPersen);
+}
+
+void ReadSensor(){
+  digitalWrite(trigger, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigger, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigger, LOW);
+  Duration = pulseIn(echo, HIGH);
+  Jarak = (Duration / 2) / 28.5;
+  Serial.print("Volume = ");
+  Serial.print(volPersen);
+  Serial.println(" %");
+  if (Jarak > 25 ){
+    Jarak = 25;
+  }
+  else if (Jarak <= 2 ) {
+    Jarak = 0;
+  }
+  else {
+    Jarak = Jarak;
+  }
+}
+
+void loop(){
+  Blynk.run();
+  Timer.run();
+  BukaTutup();
+  x0 = 25 - Jarak;
+  volPersen = x0 * 100/25;
+  ReadSensor();
+  if (volPersen > 80 ) {
+    Serial.println("tempat sampah penuh");
+    delay(3000);
+    digitalWrite(RedLed, HIGH);
+    digitalWrite(GreenLed, LOW);
+  }
+  else{
+    Serial.println("tempat sampah kosong");
+    delay(1000);
+    digitalWrite(RedLed, LOW);
+    digitalWrite(GreenLed, HIGH);
+  }
+}
